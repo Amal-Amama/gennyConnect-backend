@@ -30,7 +30,7 @@ import { AuthGuard } from '@nestjs/passport';
 export interface AuthRequest extends Request {
   user?: {
     userId: string;
-    id?: string;
+    _id?: string;
   };
 }
 @Controller('auth')
@@ -74,29 +74,30 @@ export class AuthController {
       resetPasswordConfirmationDto,
     );
   }
-  // @UseGuards(JwtAuthGuard)
-  // @Delete('delete')
-  // deleteAccount(
-  //   @Req() request: AuthRequest,
-  //   @Body() deleteAccountDto: DeletAccountDto,
-  // ) {
-  //   const userId = request.user?._id;
-  //   return this.authService.deleteAccount(userId, deleteAccountDto);
-  // }
-  // @UseGuards(JwtAuthGuard)
-  // @Patch('update')
-  // updateAccount(
-  //   @Req() request: AuthRequest,
-  //   @Body() updateAccountDto: UpdateAccountDto,
-  // ) {
-  //   const userId = request.user._id;
-  //   return this.authService.updateAccount(userId, updateAccountDto);
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Delete('delete')
+  deleteAccount(
+    @Req() request: AuthRequest,
+    @Body() deleteAccountDto: DeletAccountDto,
+  ) {
+    const userId = request.user?._id;
+    return this.authService.deleteAccount(userId, deleteAccountDto);
+  }
+  @UseGuards(JwtAuthGuard)
+  @Patch('update')
+  updateAccount(
+    @Req() request: AuthRequest,
+    @Body() updateAccountDto: UpdateAccountDto,
+  ) {
+    const userId = request.user._id;
+    return this.authService.updateAccount(userId, updateAccountDto);
+  }
 
   @Post('logout')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: AuthRequest) {
-    console.log(req.user.id);
+    const userId = req.user._id;
+    return await this.authService.logout(userId);
   }
 }

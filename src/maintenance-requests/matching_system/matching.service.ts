@@ -20,6 +20,7 @@ export class MatchingService {
     const technicians = await this.userModel.find({
       role: UserRole.TECHNICIAN,
       emailConfirmed: true,
+      //  refreshToken: null,
     });
     if (!technicians || technicians.length === 0) {
       throw new NotFoundException("Can't find any technicians");

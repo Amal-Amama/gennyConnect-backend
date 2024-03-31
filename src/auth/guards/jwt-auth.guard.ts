@@ -1,4 +1,3 @@
-//
 import {
   ExecutionContext,
   Injectable,
@@ -15,9 +14,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   handleRequest(err, user, info) {
     if (err || !user) {
-      throw err || new UnauthorizedException();
+      throw err || new UnauthorizedException('token expired');
     }
-
     return user;
   }
 }

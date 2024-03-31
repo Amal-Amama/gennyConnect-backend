@@ -20,20 +20,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: configService.get('JWT_SECRET'),
+      secretOrKey: configService.get('JWT_ACCESS_SECRET'),
       ignoreExpiration: false,
     });
   }
   async validate(payload: Payload) {
     const user = await this.userModel.findOne({ email: payload.email });
     if (!user) throw new UnauthorizedException('Unauthorized');
-    // Convertir l'objet mongoose en objet JavaScript
     const userObject = user.toObject();
-
-    // Supprimer la propriété 'password' de l'objet JavaScript
     delete userObject.password;
-
-    //console.log(userObject);
     return userObject;
   }
 }

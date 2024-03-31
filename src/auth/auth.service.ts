@@ -137,12 +137,6 @@ export class AuthService {
     }
   }
 
-  // async validateToken(token: string) {
-  //   return await this.jwtService.verifyAsync(token, {
-  //     secret: process.env.JWT_SECRET,
-  //   });
-  // }
-
   async login(
     loginDto: LoginDto,
   ): Promise<{ accessToken; refreshToken; user: {} }> {
@@ -150,42 +144,29 @@ export class AuthService {
 
     const user = await this.userModel.findOne({ email });
     if (!user) {
-      throw new NotFoundException('user not found');
+      throw new NotFoundException('User not found');
     }
     if (!user.emailConfirmed) {
       throw new UnauthorizedException('Email not confirmed');
     } else {
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        throw new UnauthorizedException('password does not match');
+        throw new UnauthorizedException('Password does not match');
       }
-      //retourner un token jwt
-      const payload = {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        location: user.location,
-      };
+      // Generate tokens
       const tokens = await this.getTokens(
-        payload.id,
-        payload.email,
-        payload.role,
-        payload.location,
+        user._id,
+        user.email,
+        user.role,
+        user.location,
       );
-      const accessToken = this.jwtService.sign(payload, {
-        expiresIn: this.configService.get('JWT_EXPIRES'),
-        secret: this.configService.get('JWT_SECRET'),
-      });
-      // const token = this.jwtService.sign(payload, {
-      //   expiresIn: this.configService.get('JWT_EXPIRES'),
-      //   secret: this.configService.get('JWT_SECRET'),
-      // });
-      const refreshToken = tokens.refreshToken;
+
+      // Update refreshToken in the database
       await this.updateRefreshToken(user._id, tokens.refreshToken);
 
       return {
-        accessToken,
-        refreshToken,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         user: {
           firstName: user.firstName,
           lastName: user.lastName,
@@ -195,6 +176,7 @@ export class AuthService {
       };
     }
   }
+
   async resetPasswordDemand(resetPasswordDemandDto: ResetPasswordDemandDto) {
     const { email } = resetPasswordDemandDto;
     const user = await this.userModel.findOne({ email });
@@ -288,7 +270,7 @@ export class AuthService {
           location: userLocation,
         },
         {
-          secret: process.env.JWT_SECRET,
+          secret: process.env.JWT_ACCESS_SECRET,
           expiresIn: '15m',
         },
       ),
