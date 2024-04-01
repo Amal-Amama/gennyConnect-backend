@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -163,6 +164,7 @@ export class AuthService {
 
       // Update refreshToken in the database
       await this.updateRefreshToken(user._id, tokens.refreshToken);
+      console.log(tokens.refreshToken);
 
       return {
         accessToken: tokens.accessToken,
@@ -245,12 +247,14 @@ export class AuthService {
       { _id: userId, refreshToken: { $ne: null } },
       { $set: { refreshToken: null } },
     );
-    console.log(user);
+    // console.log(user);
 
     return user;
   }
   async updateRefreshToken(userId, refreshToken: string) {
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    //   console.log(refreshToken);
+
     await this.userModel.findByIdAndUpdate(userId, {
       refreshToken: hashedRefreshToken,
     });
@@ -292,5 +296,23 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+  async refreshTokens(userId: string, refreshToken: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user || !user.refreshToken)
+      throw new ForbiddenException('Access Denied');
+    const refreshTokenMatches = await bcrypt.compare(
+      refreshToken,
+      user.refreshToken,
+    );
+    if (!refreshTokenMatches) throw new ForbiddenException('Access Denied');
+    const tokens = await this.getTokens(
+      user.id,
+      user.email,
+      user.role,
+      user.location,
+    );
+    await this.updateRefreshToken(user.id, tokens.refreshToken);
+    return tokens;
   }
 }

@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 
 import { InjectModel } from '@nestjs/mongoose';
-import { MaintenanceRequest } from './schemas/maintenanceRequest.schema';
+import {
+  MaintenanceRequest,
+  RequestStatus,
+} from './schemas/maintenanceRequest.schema';
 import mongoose from 'mongoose';
 import { Query } from 'express-serve-static-core';
 import { User } from 'src/auth/schemas/user.schema';
@@ -167,5 +170,32 @@ export class MaintenanceRequestsService {
       throw new Error('Technician not found');
     }
     return technician.assignedRequestsToTech;
+  }
+  async acceptMaintenance(maintenaceId: string, TechId: string) {
+    const maintenance =
+      await this.maintenanceRequestModel.findById(maintenaceId);
+    if (!maintenance) {
+      throw new NotFoundException('maintenace with this id not found');
+    }
+    maintenance.status = RequestStatus.ACCEPTED;
+    const tech = await this.userModel.findById(TechId);
+    if (!tech) {
+      throw new NotFoundException('technicien with the specific id not found');
+    }
+    maintenance.AcceptedBy.push(tech);
+    maintenance.save();
+    return maintenance;
+  }
+  async rejectMaintenance(techId: string, maintenanceId: string) {
+    const technician = await this.userModel.findById(techId);
+    if (!technician) {
+      throw new NotFoundException('Technician not found');
+    }
+    const NewList = technician.assignedRequestsToTech.filter((m) => {
+      return m._id.toString() !== maintenanceId;
+    });
+    technician.assignedRequestsToTech = NewList;
+    await technician.save();
+    return { message: 'Maintenance rejected' };
   }
 }

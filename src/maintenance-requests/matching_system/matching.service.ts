@@ -4,6 +4,7 @@ import { TechLocation } from './location.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { MaintenanceRequest } from '../schemas/maintenanceRequest.schema';
 import { InjectModel } from '@nestjs/mongoose';
+import { MailerService } from 'src/mailer/mailer.service';
 
 @Injectable()
 export class MatchingService {
@@ -11,6 +12,7 @@ export class MatchingService {
     @InjectModel(User.name) // Injectez le modèle User
     private userModel: mongoose.Model<User>,
     private readonly locationService: TechLocation,
+    private readonly mailerService: MailerService,
   ) {}
 
   async matchTechnicians(
@@ -60,6 +62,13 @@ export class MatchingService {
         if (distance < 30) {
           technician.assignedRequestsToTech.push(maintenanceRequest);
           await technician.save();
+          if (technician.refreshToken === null) {
+            await this.mailerService.sendMailNotifForTech(
+              technician.email,
+              technician.firstName,
+              technician.role,
+            );
+          }
         } else {
           console.log(
             'This request is not suitable for none of our technicians',

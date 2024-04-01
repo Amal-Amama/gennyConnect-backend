@@ -27,10 +27,12 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import * as path from 'path';
 import { AccessTokenGuard } from './guards/accessToken.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { RefreshTokenGuard } from './guards/refreshToken.guard';
 export interface AuthRequest extends Request {
   user?: {
     userId: string;
     _id?: string;
+    id?: string;
   };
 }
 @Controller('auth')
@@ -99,5 +101,15 @@ export class AuthController {
   async logout(@Req() req: AuthRequest) {
     const userId = req.user._id;
     return await this.authService.logout(userId);
+  }
+  @UseGuards(RefreshTokenGuard)
+  @Get('refresh')
+  refreshTokens(@Req() req: AuthRequest) {
+    const userId = req.user.id;
+    console.log(userId);
+    const refreshToken = req.user['refreshToken'];
+    console.log(refreshToken);
+
+    return this.authService.refreshTokens(userId, refreshToken);
   }
 }

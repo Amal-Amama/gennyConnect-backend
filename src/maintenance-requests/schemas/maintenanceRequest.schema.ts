@@ -13,6 +13,7 @@ export enum Priority {
 // Enum pour les statuts de la demande
 export enum RequestStatus {
   PENDING = 'pending',
+  ACCEPTED = 'accepted',
   IN_PROGRESS = 'in_progress',
   COMPLETED = 'completed',
 }
@@ -49,7 +50,7 @@ export class MaintenanceRequest {
   @Prop()
   requestType: MaintenanceRequestType; //preventive, corrective
   @Prop()
-  AssignedTechnician: string;
+  AcceptedBy: any[] = [];
   @Prop()
   maintenanceLocation: string;
 }

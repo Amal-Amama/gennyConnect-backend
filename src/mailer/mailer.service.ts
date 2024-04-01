@@ -151,14 +151,55 @@ export class MailerService {
   async sendMailNotifForTech(
     userEmail: string,
     firstName: string,
-    userRole: string,
+    userRole: string[],
   ) {
     try {
       await this.transporter.sendMail({
         from: process.env.USER,
         to: userEmail,
         subject: 'New work added',
-        html: `<p>Congratulations ${firstName}🎉,you have a new maintenance opportunity added to your jobBoard in gennyConnect plateform</p></br> <p>check it !, don't rate this opportunity to elevate your score and bieng most recommended ${userRole}!!</p>`,
+        html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #FF6600;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+    <h2>New Work Added</h2>
+    <p>Congratulations ${firstName}🎉,you have a new maintenance opportunity added to your jobBoard in gennyConnect plateform</p></br> 
+    <p><strong>check it !</strong>, don't rate this opportunity to elevate your score and bieng most recommended ${userRole}!!</p><br/> 
+    <p><a href="" class="btn">Login</a></p><br/>
+     <div class="footer">
+            <p>Thank you,</p>
+            <p>GennyConnect Team</p>
+        </div>
+    </div>
+</body>
+</html>`,
       });
     } catch (error) {
       console.error("Erreur lors de l'envoi de l'e-mail:", error);

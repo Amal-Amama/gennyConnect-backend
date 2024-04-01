@@ -153,4 +153,27 @@ export class MaintenanceRequestsController {
   async getMaintenanceRequestForTech(@Param('id') technicianId: string) {
     return await this.maintenanceService.getNearbyMaintenance(technicianId);
   }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Post(':mid/accept')
+  @Roles(UserRole.TECHNICIAN)
+  async acceptMaintenanceRequest(
+    @Param('mid') maintenaceId: string,
+    @Req() req: AuthRequest,
+  ) {
+    const TechId = req.user._id;
+    return await this.maintenanceService.acceptMaintenance(
+      maintenaceId,
+      TechId,
+    );
+  }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Post(':mid/reject')
+  @Roles(UserRole.TECHNICIAN)
+  async rejectMaintenance(
+    @Param('mid') maintenanceId: string,
+    @Req() req: AuthRequest,
+  ) {
+    const TechId = req.user._id;
+    return this.maintenanceService.rejectMaintenance(TechId, maintenanceId);
+  }
 }
