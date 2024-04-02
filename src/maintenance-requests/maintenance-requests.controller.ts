@@ -65,12 +65,6 @@ export class MaintenanceRequestsController {
     @Query() query: ExpressQuery,
   ): Promise<MaintenanceRequest[]> {
     const userId = request.user._id;
-    // if (userId.toString() !== uIdFromParam) {
-    //   throw new ForbiddenException(
-    //     "Vous n'êtes pas autorisé à accéder à cette ressource",
-    //   );
-    // }
-
     return this.maintenanceService.findAllUserRequests(userId, query);
   }
 
@@ -175,5 +169,15 @@ export class MaintenanceRequestsController {
   ) {
     const TechId = req.user._id;
     return this.maintenanceService.rejectMaintenance(TechId, maintenanceId);
+  }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get(':mid/technicians')
+  @Roles(UserRole.CLIENT)
+  async getTechnicians(
+    @Param('mid') id: string,
+    @Req() request: AuthRequest,
+  ): Promise<MaintenanceRequest> {
+    const userId = request.user._id;
+    return this.maintenanceService.technicansAcceptMaintenance(id, userId);
   }
 }

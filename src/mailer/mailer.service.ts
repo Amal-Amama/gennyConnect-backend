@@ -205,4 +205,57 @@ export class MailerService {
       console.error("Erreur lors de l'envoi de l'e-mail:", error);
     }
   }
+  async sendMailNotifForClient(userEmail: string, firstName: string) {
+    try {
+      await this.transporter.sendMail({
+        from: process.env.USER,
+        to: userEmail,
+        subject: 'New work added',
+        html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #FF6600;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+    <h2>New Work Added</h2>
+    <p>Congratulations ${firstName}🎉,a new technician accepted to work with you</p></br> 
+    <strong>check your account for more details !</strong><br/> 
+    <p><a href="" class="btn">Login</a></p><br/>
+     <div class="footer">
+            <p>Thank you,</p>
+            <p>GennyConnect Team</p>
+        </div>
+    </div>
+</body>
+</html>`,
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de l'e-mail:", error);
+    }
+  }
 }

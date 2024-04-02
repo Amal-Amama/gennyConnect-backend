@@ -16,6 +16,7 @@ import { User } from 'src/auth/schemas/user.schema';
 import { TechLocation } from './matching_system/location.service';
 import { UserRole } from '../auth/schemas/user.schema';
 import { MatchingService } from './matching_system/matching.service';
+import { MailerService } from 'src/mailer/mailer.service';
 
 @Injectable()
 export class MaintenanceRequestsService {
@@ -26,6 +27,7 @@ export class MaintenanceRequestsService {
     private userModel: mongoose.Model<User>,
     private readonly locationService: TechLocation,
     private readonly machingService: MatchingService,
+    private readonly mailerService: MailerService,
   ) {}
 
   async getAllMaintenanceRequests() {
@@ -184,6 +186,17 @@ export class MaintenanceRequestsService {
     }
     maintenance.AcceptedBy.push(tech);
     maintenance.save();
+    const client = await this.userModel.findById(maintenance.creator);
+    if (!client) {
+      throw new NotFoundException('client not found');
+    }
+    if (client.refreshToken === null) {
+      await this.mailerService.sendMailNotifForClient(
+        client.email,
+        client.firstName,
+      );
+    }
+
     return maintenance;
   }
   async rejectMaintenance(techId: string, maintenanceId: string) {
@@ -197,5 +210,22 @@ export class MaintenanceRequestsService {
     technician.assignedRequestsToTech = NewList;
     await technician.save();
     return { message: 'Maintenance rejected' };
+  }
+  async technicansAcceptMaintenance(
+    id: string,
+    userId: string,
+  ): Promise<MaintenanceRequest> {
+    let maintenanceRequest;
+    try {
+      maintenanceRequest = await this.maintenanceRequestModel
+        .findOne({ _id: id, creator: userId }) // Ajouter la vérification du créateur de la demande
+        .exec();
+    } catch (error) {
+      throw new NotFoundException('Could not find maintenanceRequest');
+    }
+    if (!maintenanceRequest) {
+      throw new NotFoundException('Could not find maintenanceRequest');
+    }
+    return maintenanceRequest.AcceptedBy;
   }
 }
