@@ -78,7 +78,7 @@ export class AuthService {
       createdAt: Date.now(),
       expireAt: Date.now() + 21600000,
     });
-    userVerification.save();
+    await userVerification.save();
     //envoyer une mail de confirmation
     const confirmationLink = `${process.env.APP_URL}/auth/signup/verify/${user._id}/${uniqueString}`;
 
