@@ -68,7 +68,7 @@ export class AuthService {
       score: score,
       emailConfirmed: false,
     });
-    user.save();
+    await user.save();
     //creation de user verification for this user
     const uniqueString = `${user._id}-${uuidv4()}`;
     const hashedUniqueString = await bcrypt.hash(uniqueString, 10);
