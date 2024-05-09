@@ -90,14 +90,7 @@ export class AuthService {
       score: score,
       emailConfirmed: false,
     });
-
-    try {
-      await user.save();
-    } catch (err) {
-      throw new InternalServerErrorException(
-        'Signing up failed, please try again later!',
-      );
-    }
+    await user.save();
     //creation de user verification for this user
     const uniqueString = `${user._id}-${uuidv4()}`;
     const hashedUniqueString = await bcrypt.hash(uniqueString, 10);
@@ -107,13 +100,8 @@ export class AuthService {
       createdAt: Date.now(),
       expireAt: Date.now() + 21600000,
     });
-    try {
-      await userVerification.save();
-    } catch (err) {
-      throw new InternalServerErrorException(
-        'Signing up failed, please try again later!',
-      );
-    }
+    await userVerification.save();
+    //envoyer une mail de confirmation
     const confirmationLink = `${process.env.APP_URL}/auth/signup/verify/${user._id}/${uniqueString}`;
 
     await this.mailerService.sendingSignupConfirmation(email, confirmationLink);
