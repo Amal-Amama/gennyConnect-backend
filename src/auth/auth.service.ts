@@ -2,7 +2,10 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,7 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
 import { Model } from 'mongoose';
-import { User } from './schemas/user.schema';
+import { User, UserStatut } from './schemas/user.schema';
 import { SignUpDto } from './dto/signUp.dto';
 import { LoginDto } from './dto/login.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -37,38 +40,64 @@ export class AuthService {
     private readonly mailerService: MailerService,
   ) {}
 
-  async signup(signupDto: SignUpDto): Promise<{ data: string }> {
-    const { email } = signupDto;
-    const existingUser = await this.userModel.findOne({ email });
-    if (existingUser) {
-      throw new ConflictException(
-        'user with the provided email already exists',
+  async signup(
+    logoPath: string,
+    diplomePath: string,
+    certificationsPaths: string[],
+    signupDto: SignUpDto,
+  ) {
+    const { email, role } = signupDto;
+    let existingUser;
+    try {
+      existingUser = await this.userModel.findOne({ email });
+    } catch (err) {
+      throw new HttpException(
+        'Signing up failed, please try again later!',
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    //hash mot de pass
+
+    if (existingUser) {
+      throw new ConflictException('User exists already, please login instead.');
+    }
+
     const hashedPassword = await bcrypt.hash(signupDto.password, 10);
-    //calcule de score
+
     let score = 0;
-    if (signupDto.yearsOfExperience > 0) {
-      score += signupDto.yearsOfExperience * 10;
-    }
-    if (signupDto.diploma) {
-      score += 15;
-    }
-    if (signupDto.certifications) {
-      score += signupDto.certifications.length * 5;
-    }
-    if (signupDto.spokenLanguages) {
-      score += signupDto.spokenLanguages.length * 2;
+    if (role === 'technician') {
+      if (signupDto.yearsOfExperience > 0) {
+        score += signupDto.yearsOfExperience * 10;
+      }
+      if (signupDto.diplome) {
+        score += 15;
+      }
+      if (signupDto.certifications) {
+        score += signupDto.certifications.length * 5;
+      }
+      if (signupDto.spokenLanguages) {
+        score += signupDto.spokenLanguages.length * 2;
+      }
+    } else if (role === 'maintenance_company' || role === 'client') {
+      score = 0;
     }
     //enregister user dans le base de données
     const user = await this.userModel.create({
       ...signupDto,
+      diplome: diplomePath,
+      logo: logoPath,
+      certifications: certificationsPaths,
       password: hashedPassword,
       score: score,
       emailConfirmed: false,
     });
-    user.save();
+
+    try {
+      await user.save();
+    } catch (err) {
+      throw new InternalServerErrorException(
+        'Signing up failed, please try again later!',
+      );
+    }
     //creation de user verification for this user
     const uniqueString = `${user._id}-${uuidv4()}`;
     const hashedUniqueString = await bcrypt.hash(uniqueString, 10);
@@ -78,22 +107,27 @@ export class AuthService {
       createdAt: Date.now(),
       expireAt: Date.now() + 21600000,
     });
-    userVerification.save();
-    //envoyer une mail de confirmation
+    try {
+      await userVerification.save();
+    } catch (err) {
+      throw new InternalServerErrorException(
+        'Signing up failed, please try again later!',
+      );
+    }
     const confirmationLink = `${process.env.APP_URL}/auth/signup/verify/${user._id}/${uniqueString}`;
 
     await this.mailerService.sendingSignupConfirmation(email, confirmationLink);
-    //le retour
-    return { data: 'user successfully created' };
+
+    return {
+      message: 'user Successfully registred',
+      user: user.toObject({ getters: true }),
+    };
   }
   async confirmMail(userId: string, uniqueString: string, res: Response) {
-    // Rechercher l'utilisateur dans la base de données
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
-    // Rechercher la vérification de l'utilisateur
     const userVerification = await this.userVerificationModel
       .findOne({
         userId,
@@ -138,22 +172,36 @@ export class AuthService {
     }
   }
 
-  async login(
-    loginDto: LoginDto,
-  ): Promise<{ accessToken; refreshToken; user: {} }> {
+  async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
+    let user;
+    try {
+      user = await this.userModel.findOne({ email });
+    } catch (err) {
+      throw new HttpException(
+        'Loggin in is failed, please try again later!',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
 
-    const user = await this.userModel.findOne({ email });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(
+        'User not found,Please signup and confirm you account first',
+      );
     }
     if (!user.emailConfirmed) {
-      throw new UnauthorizedException('Email not confirmed');
+      throw new UnauthorizedException(
+        'Email not confirmed,Please confirm your email first before 6 hours',
+      );
     } else {
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        throw new UnauthorizedException('Password does not match');
+        throw new UnauthorizedException(
+          'Password does not match,could not log you in.',
+        );
       }
+      user.statut = UserStatut.ONLINE;
+      await user.save();
       // Generate tokens
       const tokens = await this.getTokens(
         user._id,
@@ -169,12 +217,8 @@ export class AuthService {
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        user: {
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          location: user.location,
-        },
+        message: 'Logged in successfully!',
+        user: user.toObject({ getters: true }),
       };
     }
   }
@@ -190,9 +234,9 @@ export class AuthService {
       step: 60 * 15, //15 min
       encoding: 'base32',
     });
-    const url = 'http://localhost:5000/auth/reset-password-confirmation';
+    const url = 'http://localhost:3000/confirmResetPS';
     await this.mailerService.sendResetPassword(email, url, code);
-    return { data: 'reset password email has been sent' };
+    return { message: 'reset password email has been sent' };
   }
   async resetPasswordConfirmation(
     ResetPasswordConfirmationDto: ResetPasswordConfirmationDto,
@@ -216,7 +260,7 @@ export class AuthService {
     user.password = newHashedPassword;
     await user.save();
 
-    return { data: 'Password updated' };
+    return { message: 'Password updated successfully!' };
   }
   async deleteAccount(userId: string, deleteAccountDto: DeletAccountDto) {
     const { password } = deleteAccountDto;
@@ -245,7 +289,7 @@ export class AuthService {
   async logout(userId: string) {
     const user = this.userModel.findOneAndUpdate(
       { _id: userId, refreshToken: { $ne: null } },
-      { $set: { refreshToken: null } },
+      { $set: { refreshToken: null, statut: UserStatut.OFFLINE } },
     );
     // console.log(user);
 

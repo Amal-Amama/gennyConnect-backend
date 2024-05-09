@@ -14,6 +14,11 @@ import {
   HttpStatus,
   HttpException,
   UnauthorizedException,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  FileTypeValidator,
+  UploadedFiles,
 } from '@nestjs/common';
 import { SignUpDto } from './dto/signUp.dto';
 import { AuthService } from './auth.service';
@@ -28,6 +33,12 @@ import * as path from 'path';
 import { AccessTokenGuard } from './guards/accessToken.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { RefreshTokenGuard } from './guards/refreshToken.guard';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
+import { FileUploadService } from 'src/file_upload/file_upload.service';
+import { UserRole } from './schemas/user.schema';
 export interface AuthRequest extends Request {
   user?: {
     userId: string;
@@ -37,12 +48,58 @@ export interface AuthRequest extends Request {
 }
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly fileUploadService: FileUploadService,
+  ) {}
 
   @Post('signup')
-  async signUp(@Body() signUpDto: SignUpDto) {
-    return this.authService.signup(signUpDto);
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'diplome', maxCount: 1 },
+      { name: 'certifications', maxCount: 20 },
+      { name: 'logo', maxCount: 1 },
+    ]),
+  )
+  async signUp(
+    @UploadedFiles()
+    files: {
+      diplome?: Express.Multer.File[];
+      certifications?: Express.Multer.File[];
+      logo?: Express.Multer.File;
+    },
+    @Body() signUpDto: SignUpDto,
+  ) {
+    let diplomePath;
+    let certificationsPaths = [];
+    let logoPath;
+
+    if (signUpDto.role === UserRole.TECHNICIAN) {
+      if (files.diplome && files.diplome.length > 0) {
+        diplomePath = this.fileUploadService.uploadImage(files.diplome[0]);
+      }
+      if (files.certifications && files.certifications.length > 0) {
+        certificationsPaths = files.certifications.map((file) =>
+          this.fileUploadService.uploadImage(file),
+        );
+      }
+    } else if (
+      signUpDto.role === UserRole.MAINTENANCE_COMPANY ||
+      signUpDto.role === UserRole.CLIENT
+    ) {
+      if (files.logo) {
+        logoPath = this.fileUploadService.uploadImage(files.logo[0]);
+      }
+    }
+
+    return this.authService.signup(
+      logoPath,
+      diplomePath,
+      certificationsPaths,
+      signUpDto,
+    );
   }
+
   @Get('signup/verify/:userId/:uniqueString')
   async verify(
     @Param('userId') userId: string,
@@ -60,7 +117,7 @@ export class AuthController {
     res.sendFile(path.join(__dirname, '../views/verified.html'));
   }
   @HttpCode(HttpStatus.OK)
-  @Post('login') //kenite get
+  @Post('login')
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }

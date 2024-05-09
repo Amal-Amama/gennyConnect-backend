@@ -9,10 +9,14 @@ export enum UserRole {
 }
 
 export enum InstitutionType {
-  PHARMACY = 'pharmacy',
-  CLINIC = 'clinic',
-  LABORATORY = 'laboratory',
-  HOSPITAL = 'hospital',
+  PHARMACY = 'Pharmacy',
+  CLINIC = 'Clinic',
+  LABORATORY = 'Laboratory',
+  HOSPITAL = 'Hospital',
+}
+export enum UserStatut {
+  ONLINE = 'online',
+  OFFLINE = 'offline',
 }
 
 export interface AvailabilitySlot {
@@ -77,7 +81,7 @@ export class User {
   yearsOfExperience?: number;
 
   @Prop()
-  diploma?: string;
+  diplome?: string[];
 
   @Prop()
   certifications?: string[];
@@ -102,7 +106,9 @@ export class User {
   companyName?: string;
 
   @Prop()
-  companyLogo?: string; // optional
+  logo?: string; // optional
+  @Prop()
+  statut?: UserStatut;
 
   @Prop({ default: false })
   emailConfirmed?: boolean;

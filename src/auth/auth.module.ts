@@ -12,6 +12,7 @@ import { UserVerificationSchema } from './schemas/userVerification.schema';
 import { AccessTokenStrategy } from './strategies/accessToken.strategy';
 import { RefreshTokenStrategy } from './strategies/refreshToken.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { FileUploadService } from 'src/file_upload/file_upload.service';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     JwtStrategy,
     AccessTokenStrategy,
     RefreshTokenStrategy,
+    FileUploadService,
   ],
   exports: [AuthService, JwtAuthGuard],
 })

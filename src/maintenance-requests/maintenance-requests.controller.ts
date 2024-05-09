@@ -28,6 +28,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FileUploadService } from 'src/file_upload/file_upload.service';
+import { RefreshTokenGuard } from 'src/auth/guards/refreshToken.guard';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -82,7 +83,6 @@ export class MaintenanceRequestsController {
     @Req() request: AuthRequest,
     @Body() maintenanceRequestData: CreateMaintenaceRequestDTO,
   ) {
-    console.log(image);
     const imagePath = this.fileUploadService.uploadImage(image);
     const userId = request.user._id;
     return this.maintenanceService.create(
@@ -141,7 +141,7 @@ export class MaintenanceRequestsController {
       throw new HttpException(error.message, error.status);
     }
   }
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RefreshTokenGuard, RolesGuard)
   @Get('/nearby/:id')
   @Roles(UserRole.TECHNICIAN)
   async getMaintenanceRequestForTech(@Param('id') technicianId: string) {
