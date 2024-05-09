@@ -90,7 +90,14 @@ export class AuthService {
       score: score,
       emailConfirmed: false,
     });
-    await user.save();
+    try {
+      await user.save();
+    } catch (err) {
+      throw new HttpException(
+        'Signing up failed, please try again later!',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
     //creation de user verification for this user
     const uniqueString = `${user._id}-${uuidv4()}`;
     const hashedUniqueString = await bcrypt.hash(uniqueString, 10);
