@@ -106,9 +106,16 @@ export class User {
   companyName?: string;
 
   @Prop()
+  activityField?: string;
+
+  @Prop()
   logo?: string; // optional
+
   @Prop()
   statut?: UserStatut;
+
+  @Prop()
+  profilImage?: string;
 
   @Prop({ default: false })
   emailConfirmed?: boolean;

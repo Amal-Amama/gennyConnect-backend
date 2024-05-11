@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { UserVerification } from './schemas/userVerification.schema';
 import { Response } from 'express';
 import * as path from 'path';
+import { FileUploadService } from 'src/file_upload/file_upload.service';
 
 @Injectable()
 export class AuthService {
@@ -38,14 +39,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailerService: MailerService,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
-  async signup(
-    logoPath: string,
-    diplomePath: string,
-    certificationsPaths: string[],
-    signupDto: SignUpDto,
-  ) {
+  async signup(files: any, signupDto: SignUpDto) {
     const { email, role } = signupDto;
     let existingUser;
     try {
@@ -59,6 +56,21 @@ export class AuthService {
 
     if (existingUser) {
       throw new ConflictException('User exists already, please login instead.');
+    }
+    let diplomePath;
+    let certificationsPaths = [];
+    let logoPath;
+
+    if (files && files.diplome && files.diplome.length > 0) {
+      diplomePath = this.fileUploadService.uploadImage(files.diplome[0]);
+    }
+    if (files && files.certifications && files.certifications.length > 0) {
+      certificationsPaths = files.certifications.map((file) =>
+        this.fileUploadService.uploadImage(file),
+      );
+    }
+    if (files && files.logo) {
+      logoPath = this.fileUploadService.uploadImage(files.logo[0]);
     }
 
     const hashedPassword = await bcrypt.hash(signupDto.password, 10);
@@ -93,6 +105,11 @@ export class AuthService {
     try {
       await user.save();
     } catch (err) {
+      if (diplomePath) this.fileUploadService.deleteFile(diplomePath);
+      certificationsPaths.forEach((path) =>
+        this.fileUploadService.deleteFile(path),
+      );
+      if (logoPath) this.fileUploadService.deleteFile(logoPath);
       throw new HttpException(
         'Signing up failed, please try again later!',
         HttpStatus.INTERNAL_SERVER_ERROR,

@@ -37,7 +37,6 @@ import {
   FileFieldsInterceptor,
   FileInterceptor,
 } from '@nestjs/platform-express';
-import { FileUploadService } from 'src/file_upload/file_upload.service';
 import { UserRole } from './schemas/user.schema';
 export interface AuthRequest extends Request {
   user?: {
@@ -48,10 +47,7 @@ export interface AuthRequest extends Request {
 }
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly fileUploadService: FileUploadService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
   @UseInterceptors(
@@ -59,6 +55,7 @@ export class AuthController {
       { name: 'diplome', maxCount: 1 },
       { name: 'certifications', maxCount: 20 },
       { name: 'logo', maxCount: 1 },
+      { name: 'profilImage', maxCount: 1 },
     ]),
   )
   async signUp(
@@ -70,34 +67,7 @@ export class AuthController {
     },
     @Body() signUpDto: SignUpDto,
   ) {
-    let diplomePath;
-    let certificationsPaths = [];
-    let logoPath;
-
-    if (signUpDto.role === UserRole.TECHNICIAN) {
-      if (files.diplome && files.diplome.length > 0) {
-        diplomePath = this.fileUploadService.uploadImage(files.diplome[0]);
-      }
-      if (files.certifications && files.certifications.length > 0) {
-        certificationsPaths = files.certifications.map((file) =>
-          this.fileUploadService.uploadImage(file),
-        );
-      }
-    } else if (
-      signUpDto.role === UserRole.MAINTENANCE_COMPANY ||
-      signUpDto.role === UserRole.CLIENT
-    ) {
-      if (files.logo) {
-        logoPath = this.fileUploadService.uploadImage(files.logo[0]);
-      }
-    }
-
-    return this.authService.signup(
-      logoPath,
-      diplomePath,
-      certificationsPaths,
-      signUpDto,
-    );
+    return this.authService.signup(files, signUpDto);
   }
 
   @Get('signup/verify/:userId/:uniqueString')

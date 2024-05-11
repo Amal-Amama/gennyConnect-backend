@@ -91,8 +91,16 @@ export class SignUpDto {
   companyName?: string;
 
   @IsString()
+  @IsOptional()
+  activityField?: string;
+
+  @IsString()
   @IsOptional() // Optionnel pour les rôles autres que "maintenance_company"
   logo?: string;
+
+  @IsString()
+  @IsOptional()
+  profilImage?: string;
 
   @IsOptional()
   score?: number;
