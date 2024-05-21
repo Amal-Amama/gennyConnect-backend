@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,6 +19,7 @@ import { TechLocation } from './matching_system/location.service';
 import { UserRole } from '../auth/schemas/user.schema';
 import { MatchingService } from './matching_system/matching.service';
 import { MailerService } from 'src/mailer/mailer.service';
+import { FileUploadService } from 'src/file_upload/file_upload.service';
 
 @Injectable()
 export class MaintenanceRequestsService {
@@ -28,6 +31,7 @@ export class MaintenanceRequestsService {
     private readonly locationService: TechLocation,
     private readonly machingService: MatchingService,
     private readonly mailerService: MailerService,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   async getAllMaintenanceRequests() {
@@ -69,30 +73,52 @@ export class MaintenanceRequestsService {
       }
     }
   }
-  async create(
-    userId: string,
-    maintenanceRequestData,
-    imagePath: string,
-  ): Promise<MaintenanceRequest> {
+  async create(userId: string, maintenanceRequestData, imagePath: string) {
     //creation de demande de maintenace
-    const user = await this.userModel.findOne({
-      _id: userId,
-    });
+    let user;
+    try {
+      user = await this.userModel.findOne({
+        _id: userId,
+      });
+    } catch (err) {
+      throw new HttpException(
+        'Failed, please try again later!',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
     if (!user) {
       throw new BadRequestException('User not found');
     }
+    let status = 'pending';
     const createdMaintenanceRequest = new this.maintenanceRequestModel({
       ...maintenanceRequestData,
       creator: userId,
       image: imagePath,
+      status,
     });
     const clientSpokenLanguages = user.spokenLanguages;
     await this.machingService.matchTechnicians(
       clientSpokenLanguages,
       createdMaintenanceRequest,
     );
-
-    return await createdMaintenanceRequest.save();
+    try {
+      await createdMaintenanceRequest.save();
+      user.createdMaintenancesRequests.push(createdMaintenanceRequest);
+      await user.save();
+    } catch (err) {
+      if (imagePath) this.fileUploadService.deleteFile(imagePath);
+      throw new HttpException(
+        'failed, please try again later!',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return {
+      message: 'MaintenanceRequest Successfully Created',
+      createdMaintenanceRequest: createdMaintenanceRequest.toObject({
+        getters: true,
+      }),
+    };
   }
   async findSingleMaintenanceRequest(
     id: string,

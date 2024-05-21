@@ -46,7 +46,7 @@ export class AuthService {
     const { email, role } = signupDto;
     let existingUser;
     try {
-      existingUser = await this.userModel.findOne({ email });
+      existingUser = await this.userModel.findOne({ email: email });
     } catch (err) {
       throw new HttpException(
         'Signing up failed, please try again later!',
@@ -60,6 +60,7 @@ export class AuthService {
     let diplomePath;
     let certificationsPaths = [];
     let logoPath;
+    let profilImagePath;
 
     if (files && files.diplome && files.diplome.length > 0) {
       diplomePath = this.fileUploadService.uploadImage(files.diplome[0]);
@@ -72,36 +73,44 @@ export class AuthService {
     if (files && files.logo) {
       logoPath = this.fileUploadService.uploadImage(files.logo[0]);
     }
+    if (files && files.profilImage) {
+      profilImagePath = this.fileUploadService.uploadImage(
+        files.profilImage[0],
+      );
+    }
 
     const hashedPassword = await bcrypt.hash(signupDto.password, 10);
 
     let score = 0;
     if (role === 'technician') {
       if (signupDto.yearsOfExperience > 0) {
-        score += signupDto.yearsOfExperience * 10;
+        score += signupDto.yearsOfExperience * 20;
       }
-      if (signupDto.diplome) {
+      if (files.diplome) {
         score += 15;
       }
-      if (signupDto.certifications) {
-        score += signupDto.certifications.length * 5;
+      if (files.certifications) {
+        score += files.certifications.length * 10;
       }
       if (signupDto.spokenLanguages) {
-        score += signupDto.spokenLanguages.length * 2;
+        score += signupDto.spokenLanguages.length * 5;
       }
     } else if (role === 'maintenance_company' || role === 'client') {
       score = 0;
     }
+
     //enregister user dans le base de données
     const user = await this.userModel.create({
       ...signupDto,
       diplome: diplomePath,
       logo: logoPath,
+      profilImage: profilImagePath,
       certifications: certificationsPaths,
       password: hashedPassword,
       score: score,
       emailConfirmed: false,
     });
+
     try {
       await user.save();
     } catch (err) {
@@ -110,6 +119,7 @@ export class AuthService {
         this.fileUploadService.deleteFile(path),
       );
       if (logoPath) this.fileUploadService.deleteFile(logoPath);
+      if (profilImagePath) this.fileUploadService.deleteFile(profilImagePath);
       throw new HttpException(
         'Signing up failed, please try again later!',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -122,7 +132,7 @@ export class AuthService {
       userId: user._id,
       uniqueString: hashedUniqueString,
       createdAt: Date.now(),
-      expireAt: Date.now() + 21600000,
+      expireAt: Date.now() + 21600000, //6heures apres sa creation
     });
     await userVerification.save();
     //envoyer une mail de confirmation
@@ -188,7 +198,7 @@ export class AuthService {
     const { email, password } = loginDto;
     let user;
     try {
-      user = await this.userModel.findOne({ email });
+      user = await this.userModel.findOne({ email: email });
     } catch (err) {
       throw new HttpException(
         'Loggin in is failed, please try again later!',
@@ -205,34 +215,37 @@ export class AuthService {
       throw new UnauthorizedException(
         'Email not confirmed,Please confirm your email first before 6 hours',
       );
-    } else {
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException(
-          'Password does not match,could not log you in.',
-        );
-      }
-      user.statut = UserStatut.ONLINE;
-      await user.save();
-      // Generate tokens
-      const tokens = await this.getTokens(
-        user._id,
-        user.email,
-        user.role,
-        user.location,
-      );
-
-      // Update refreshToken in the database
-      await this.updateRefreshToken(user._id, tokens.refreshToken);
-      console.log(tokens.refreshToken);
-
-      return {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        message: 'Logged in successfully!',
-        user: user.toObject({ getters: true }),
-      };
     }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    user.statut = UserStatut.ONLINE;
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException(
+        'Password does not match,could not log you in.',
+      );
+    }
+
+    await user.save();
+    // Generate tokens
+    const tokens = await this.getTokens(
+      user._id,
+      user.email,
+      user.role,
+      user.location,
+    );
+
+    // Update refreshToken in the database
+    await this.updateRefreshToken(user._id, tokens.refreshToken);
+    return {
+      message: 'Logged in successfully!',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: user.toObject({ getters: true }),
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      location: user.location,
+    };
   }
 
   async resetPasswordDemand(resetPasswordDemandDto: ResetPasswordDemandDto) {

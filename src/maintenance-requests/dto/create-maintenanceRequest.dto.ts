@@ -4,10 +4,8 @@ import {
   RequestStatus,
   MaintenanceRequestType,
 } from '../schemas/maintenanceRequest.schema';
+import { Optional } from '@nestjs/common';
 export class CreateMaintenaceRequestDTO {
-  @IsNotEmpty()
-  @IsString()
-  title: string;
   @IsNotEmpty()
   @IsString()
   description: string;
@@ -26,9 +24,10 @@ export class CreateMaintenaceRequestDTO {
   @IsEnum(Priority, { message: 'please choose the priority' })
   @IsNotEmpty()
   priority: Priority;
-  @IsEnum(RequestStatus, { message: 'please choose a status' })
-  @IsNotEmpty()
-  status: RequestStatus;
+
+  @Optional()
+  status?: RequestStatus;
+
   @IsEnum(MaintenanceRequestType, {
     message: 'please choose a request type',
   })

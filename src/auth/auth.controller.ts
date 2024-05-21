@@ -64,6 +64,7 @@ export class AuthController {
       diplome?: Express.Multer.File[];
       certifications?: Express.Multer.File[];
       logo?: Express.Multer.File;
+      profilImage?: Express.Multer.File;
     },
     @Body() signUpDto: SignUpDto,
   ) {
@@ -86,8 +87,9 @@ export class AuthController {
   async getverificationResponse(@Res() res: Response) {
     res.sendFile(path.join(__dirname, '../views/verified.html'));
   }
-  @HttpCode(HttpStatus.OK)
+
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
@@ -103,7 +105,7 @@ export class AuthController {
       resetPasswordConfirmationDto,
     );
   }
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AccessTokenGuard)
   @Delete('delete')
   deleteAccount(
     @Req() request: AuthRequest,
@@ -112,7 +114,7 @@ export class AuthController {
     const userId = request.user?._id;
     return this.authService.deleteAccount(userId, deleteAccountDto);
   }
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AccessTokenGuard)
   @Patch('update')
   updateAccount(
     @Req() request: AuthRequest,
@@ -123,7 +125,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AccessTokenGuard)
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: AuthRequest) {
     const userId = req.user._id;
@@ -131,6 +133,7 @@ export class AuthController {
   }
   @UseGuards(RefreshTokenGuard)
   @Get('refresh')
+  @HttpCode(HttpStatus.OK)
   refreshTokens(@Req() req: AuthRequest) {
     const userId = req.user.id;
     console.log(userId);

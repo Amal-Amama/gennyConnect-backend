@@ -122,6 +122,8 @@ export class User {
   @Prop()
   assignedRequestsToTech: any[] = [];
   @Prop()
+  createdMaintenancesRequests: any[] = [];
+  @Prop()
   refreshToken: string;
 }
 
