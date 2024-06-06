@@ -1,5 +1,4 @@
 import {
-  IsEmail,
   IsNumber,
   IsString,
   ValidateNested,
@@ -8,13 +7,11 @@ import {
 import { AvailabilitySlot } from '../schemas/user.schema';
 
 export class UpdateAccountDto {
-  @IsEmail()
-  @IsOptional()
-  email: string;
   @IsString()
   @IsOptional()
   location: string;
-  @IsNumber()
+
+  @IsString()
   @IsOptional()
   mobileNumber: number;
 

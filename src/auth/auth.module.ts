@@ -13,6 +13,7 @@ import { AccessTokenStrategy } from './strategies/accessToken.strategy';
 import { RefreshTokenStrategy } from './strategies/refreshToken.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { FileUploadService } from 'src/file_upload/file_upload.service';
+import { MaintenanceRequestSchema } from 'src/maintenance-requests/schemas/maintenanceRequest.schema';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { FileUploadService } from 'src/file_upload/file_upload.service';
     MongooseModule.forFeature([
       { name: 'User', schema: UserSchema },
       { name: 'UserVerification', schema: UserVerificationSchema },
+      { name: 'MaintenanceRequest', schema: MaintenanceRequestSchema },
     ]),
   ],
   controllers: [AuthController],

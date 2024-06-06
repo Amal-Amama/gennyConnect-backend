@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+import { MaintenanceRequest } from 'src/maintenance-requests/schemas/maintenanceRequest.schema';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -64,8 +65,8 @@ export class User {
     enum: Object.values(UserRole),
     required: true,
   })
-  role: UserRole[];
-
+  //role: UserRole[];
+  role: UserRole;
   // Champs spécifiques au client (institution medicale)
   @Prop()
   medicalInstitutionName?: string;
@@ -119,12 +120,20 @@ export class User {
 
   @Prop({ default: false })
   emailConfirmed?: boolean;
-  @Prop()
-  assignedRequestsToTech: any[] = [];
-  @Prop()
-  createdMaintenancesRequests: any[] = [];
+  // @Prop()
+  //  assignedRequestsToTech: any[] = [];
+  // @Prop()
+  // assignedRequestsToTech: MaintenanceRequest[];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'MaintenanceRequest' }] })
+  assignedRequestsToTech: Types.ObjectId[];
+
+  // @Prop()
+  // createdMaintenancesRequests: any[] = [];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'MaintenanceRequest' }] })
+  createdMaintenancesRequests: MaintenanceRequest[];
   @Prop()
   refreshToken: string;
+  _id: any;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

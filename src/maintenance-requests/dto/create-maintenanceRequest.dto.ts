@@ -5,6 +5,7 @@ import {
   MaintenanceRequestType,
 } from '../schemas/maintenanceRequest.schema';
 import { Optional } from '@nestjs/common';
+import { User } from 'src/auth/schemas/user.schema';
 export class CreateMaintenaceRequestDTO {
   @IsNotEmpty()
   @IsString()
@@ -35,5 +36,6 @@ export class CreateMaintenaceRequestDTO {
   requestType: MaintenanceRequestType;
   @IsNotEmpty()
   maintenanceLocation: string;
-  creator: string;
+  // creator: string;
+  creator: User;
 }

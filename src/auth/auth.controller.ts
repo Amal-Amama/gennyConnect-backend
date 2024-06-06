@@ -9,15 +9,9 @@ import {
   Patch,
   Param,
   Res,
-  NotFoundException,
   HttpCode,
   HttpStatus,
-  HttpException,
-  UnauthorizedException,
   UseInterceptors,
-  UploadedFile,
-  ParseFilePipe,
-  FileTypeValidator,
   UploadedFiles,
 } from '@nestjs/common';
 import { SignUpDto } from './dto/signUp.dto';
@@ -31,7 +25,6 @@ import { UpdateAccountDto } from './dto/updateAccountDto.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import * as path from 'path';
 import { AccessTokenGuard } from './guards/accessToken.guard';
-import { AuthGuard } from '@nestjs/passport';
 import { RefreshTokenGuard } from './guards/refreshToken.guard';
 import {
   FileFieldsInterceptor,
@@ -77,11 +70,7 @@ export class AuthController {
     @Param('uniqueString') uniqueString: string,
     @Res() res: Response,
   ) {
-    const result = await this.authService.confirmMail(
-      userId,
-      uniqueString,
-      res,
-    );
+    return await this.authService.confirmMail(userId, uniqueString, res);
   }
   @Get('signup/verified')
   async getverificationResponse(@Res() res: Response) {
@@ -116,11 +105,13 @@ export class AuthController {
   }
   @UseGuards(JwtAuthGuard, AccessTokenGuard)
   @Patch('update')
-  updateAccount(
+  async updateAccount(
     @Req() request: AuthRequest,
     @Body() updateAccountDto: UpdateAccountDto,
   ) {
     const userId = request.user._id;
+    console.log(`User ID: ${userId}`);
+    console.log(`Update DTO: ${JSON.stringify(updateAccountDto)}`);
     return this.authService.updateAccount(userId, updateAccountDto);
   }
 
@@ -136,10 +127,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   refreshTokens(@Req() req: AuthRequest) {
     const userId = req.user.id;
-    console.log(userId);
     const refreshToken = req.user['refreshToken'];
-    console.log(refreshToken);
-
     return this.authService.refreshTokens(userId, refreshToken);
   }
 }

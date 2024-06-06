@@ -15,10 +15,11 @@ export class ChatService {
     @InjectModel(Conversation.name)
     private conversationModel: Model<Conversation>,
   ) {}
+
   async getTechnicians(clientId: string, maintenanceId: string) {
     const [client, maintenance] = await Promise.all([
       this.userModel.findById(clientId),
-      this.maintenanceRequestModel.findById(maintenanceId),
+      this.maintenanceRequestModel.findById(maintenanceId).populate('creator'),
     ]);
 
     if (!client || !maintenance) {
@@ -27,83 +28,73 @@ export class ChatService {
       );
     }
 
-    return clientId.toString() === maintenance.creator
+    return clientId === maintenance.creator._id.toString()
       ? maintenance.AcceptedBy
       : [];
   }
+
   async createConversation(
     clientId: string,
-    maintenaceId: string,
+    maintenanceId: string,
     technicianId: string,
-    conversationData,
+    conversationData: any,
   ) {
-    let createdConversation;
-    const technicians = await this.getTechnicians(clientId, maintenaceId);
+    const technicians = await this.getTechnicians(clientId, maintenanceId);
     const technician = technicians.find(
       (tech) => tech._id.toString() === technicianId,
     );
+
     if (!technician) {
       throw new NotFoundException(
         'Technician not found or not assigned to this maintenance',
       );
     }
-    createdConversation = new this.conversationModel({
+
+    const createdConversation = new this.conversationModel({
       ...conversationData,
       senderId: clientId,
       receivedId: technicianId,
     });
+
     await createdConversation.save();
     return createdConversation;
-
-    // for (const tech of technicians) {
-    //   if (tech._id.toString() === technicianId) {
-    //     createdConversation = new this.conversationModel({
-    //       ...conversationData,
-    //       senderId: clientId,
-    //       receivedId: technicianId,
-    //     });
-    //     await createdConversation.save();
-    //     return createdConversation;
-    //     break; // Sortir de la boucle dès qu'un technicien correspondant est trouvé
-    //   }
-    // }
   }
+
   async sendMessage(
     senderId: string,
     conversationId: string,
     receivedId: string,
-    messageData,
+    messageData: any,
   ) {
     const [user, conversation] = await Promise.all([
       this.userModel.findById(senderId),
-      this.conversationModel.findByIdAndUpdate(conversationId, {
-        senderId,
-        receivedId,
-      }),
+      this.conversationModel.findById(conversationId),
     ]);
 
     if (!user || !conversation) {
       throw new NotFoundException('User or conversation not found');
     }
-    if (conversation) {
-      const newMessage = {
-        ...messageData,
-        senderId: senderId,
-        createdAt: Date.now(),
-        visible: false,
-      };
-      conversation.messages.push(newMessage);
-      await conversation.save();
-      return conversation;
-    }
+
+    const newMessage = {
+      ...messageData,
+      senderId: senderId,
+      createdAt: Date.now(),
+      visible: false,
+    };
+
+    conversation.messages.push(newMessage);
+    await conversation.save();
+    return conversation;
   }
+
   async getMessages(userId: string, conversationId: string) {
     const [user, conversation] = await Promise.all([
       this.userModel.findById(userId),
       this.conversationModel.findById(conversationId),
     ]);
+
     if (!user || !conversation) {
-      throw new NotFoundException('user or conversation not fount');
+      throw new NotFoundException('User or conversation not found');
     }
 
     if (
@@ -115,24 +106,32 @@ export class ChatService {
           message.visible = true;
         }
       });
+
       await conversation.save();
-      console.log('this user participate in this conversation');
+      console.log('This user participates in this conversation');
       return conversation.messages;
+    } else {
+      throw new NotFoundException('User not authorized to view these messages');
     }
   }
+
   async getConversations(userId: string) {
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new NotFoundException('user not fount');
+      throw new NotFoundException('User not found');
     }
+
     const conversations = await this.conversationModel.find({
       $or: [{ senderId: userId }, { receivedId: userId }],
     });
+
     return conversations;
   }
+
   async getActiveUsers() {
     return this.userModel.find({ status: UserStatut.ONLINE }).exec();
   }
+
   async getInactiveUsers() {
     return this.userModel.find({ status: UserStatut.OFFLINE }).exec();
   }

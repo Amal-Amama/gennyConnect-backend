@@ -12,7 +12,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as speakeasy from 'speakeasy';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { User, UserStatut } from './schemas/user.schema';
 import { SignUpDto } from './dto/signUp.dto';
 import { LoginDto } from './dto/login.dto';
@@ -28,12 +28,15 @@ import { UserVerification } from './schemas/userVerification.schema';
 import { Response } from 'express';
 import * as path from 'path';
 import { FileUploadService } from 'src/file_upload/file_upload.service';
+import { MaintenanceRequest } from 'src/maintenance-requests/schemas/maintenanceRequest.schema';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<User>,
+    @InjectModel(MaintenanceRequest.name)
+    private maintenanceRequestModel: mongoose.Model<MaintenanceRequest>,
     @InjectModel(UserVerification.name)
     private userVerificationModel: Model<UserVerification>,
     private readonly jwtService: JwtService,
@@ -294,13 +297,16 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      //  throw new Error('Invalid email or password');
       throw new UnauthorizedException('password does not match');
     }
+    await this.maintenanceRequestModel.deleteMany({ creator: userId }).exec();
     await this.userModel.deleteOne({ _id: userId });
     return { data: 'user successfully deleted' };
   }
-  async updateAccount(userId, updateAccountDto: UpdateAccountDto) {
+  async updateAccount(userId: string, updateAccountDto: UpdateAccountDto) {
+    console.log(
+      `Updating user ID: ${userId} with data: ${JSON.stringify(updateAccountDto)}`,
+    );
     const user = await this.userModel.findByIdAndUpdate(
       userId,
       updateAccountDto,
@@ -309,15 +315,14 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return { data: 'User successfully updated' };
+    return { user, data: 'User successfully updated' };
   }
+
   async logout(userId: string) {
     const user = this.userModel.findOneAndUpdate(
       { _id: userId, refreshToken: { $ne: null } },
       { $set: { refreshToken: null, statut: UserStatut.OFFLINE } },
     );
-    // console.log(user);
-
     return user;
   }
   async updateRefreshToken(userId, refreshToken: string) {
@@ -331,7 +336,7 @@ export class AuthService {
   async getTokens(
     userId,
     userEmail: string,
-    userRole: string[],
+    userRole: string,
     userLocation: string,
   ) {
     const [accessToken, refreshToken] = await Promise.all([

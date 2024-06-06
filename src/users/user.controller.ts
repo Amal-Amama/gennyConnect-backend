@@ -4,6 +4,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/config/decorator/roles.decorator';
 import { UserRole } from 'src/auth/schemas/user.schema';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { AccessTokenGuard } from 'src/auth/guards/accessToken.guard';
 
 @Controller('users')
 export class UserController {
@@ -14,6 +15,17 @@ export class UserController {
   @Roles(UserRole.ADMIN)
   async getAllUser() {
     return await this.userService.findAll();
+  }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('roles')
+  @Roles(UserRole.ADMIN)
+  async getUsersByRole() {
+    return await this.userService.findByRole();
+  }
+  @UseGuards(JwtAuthGuard, AccessTokenGuard)
+  @Get(':uid')
+  async getOneUser(@Param('uid') userId: string) {
+    return await this.userService.findOneUser(userId);
   }
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Delete(':uid')

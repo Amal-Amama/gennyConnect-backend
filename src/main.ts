@@ -9,7 +9,7 @@ async function bootstrap() {
   app.use(
     cors({
       origin: 'http://localhost:3000', // Autoriser les requêtes depuis http://localhost:3000
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Méthodes HTTP autorisées
+      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // Méthodes HTTP autorisées
       allowedHeaders: ['Content-Type', 'Authorization'], // En-têtes autorisés
       preflightContinue: false,
       optionsSuccessStatus: 200,

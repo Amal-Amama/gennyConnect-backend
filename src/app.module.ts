@@ -8,13 +8,19 @@ import { AuthModule } from './auth/auth.module';
 import { MailerModule } from './mailer/mailer.module';
 import { UserModule } from './users/user.module';
 //import { MulterModule } from '@nestjs/platform-express';
-import { ChatModule } from './chat/chat.module';
+//import { ChatModule } from './chat/chat.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: '.env',
       isGlobal: true,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'), // Chemin absolu vers le dossier 'uploads'
+      serveRoot: '/uploads', // Racine URL pour servir les fichiers statiques
     }),
     // MulterModule.register({
     //   dest: './uploads',
@@ -24,7 +30,7 @@ import { ChatModule } from './chat/chat.module';
     AuthModule,
     MailerModule,
     UserModule,
-    ChatModule,
+    //  ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

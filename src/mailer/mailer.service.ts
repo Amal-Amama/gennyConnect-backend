@@ -151,7 +151,7 @@ export class MailerService {
   async sendMailNotifForTech(
     userEmail: string,
     firstName: string,
-    userRole: string[],
+    userRole: string,
   ) {
     try {
       await this.transporter.sendMail({
@@ -192,7 +192,7 @@ export class MailerService {
     <h2>New Work Added</h2>
     <p>Congratulations ${firstName}🎉,you have a new maintenance opportunity added to your jobBoard in gennyConnect plateform</p></br> 
     <p><strong>check it !</strong>, don't rate this opportunity to elevate your score and bieng most recommended ${userRole}!!</p><br/> 
-    <p><a href="" class="btn">Login</a></p><br/>
+    <p><a href="http://localhost:3000/login" class="btn">Login</a></p><br/>
      <div class="footer">
             <p>Thank you,</p>
             <p>GennyConnect Team</p>

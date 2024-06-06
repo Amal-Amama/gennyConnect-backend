@@ -1,4 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
+import { User } from 'src/auth/schemas/user.schema';
 
 export enum Priority {
   URGENT = 'urgent',
@@ -21,12 +23,14 @@ export enum MaintenanceRequestType {
 export class MaintenanceRequest {
   @Prop()
   description: string;
-  @Prop()
-  creator: string;
+  // @Prop()
+  // creator: string;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  creator: User;
   @Prop()
   image: string;
   @Prop()
-  provider: string; //fournisseur
+  provider: string;
   @Prop()
   deviceName: string;
   @Prop()
@@ -38,13 +42,21 @@ export class MaintenanceRequest {
   @Prop()
   priority: Priority; //urgent,normal,low
   @Prop()
-  status?: RequestStatus; //pending,in-progress,completed
+  status?: RequestStatus; //accepted,pending,in-progress,completed
   @Prop()
   requestType: MaintenanceRequestType; //preventive, corrective
-  @Prop()
-  AcceptedBy: any[] = [];
+  // @Prop()
+  // AcceptedBy: any[] = [];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
+  AcceptedBy: Types.ObjectId[];
+
   @Prop()
   maintenanceLocation: string;
+  _id: any;
+  // @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  // TechnicianId: User;
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
+  Historics: Types.ObjectId[];
 }
 export const MaintenanceRequestSchema =
   SchemaFactory.createForClass(MaintenanceRequest);
