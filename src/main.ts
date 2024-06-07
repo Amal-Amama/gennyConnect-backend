@@ -6,6 +6,7 @@ import * as cors from 'cors';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe()); //for using pipes globally in our routes
+
   app.use(
     cors({
       origin: 'http://localhost:3000', // Autoriser les requêtes depuis http://localhost:3000
